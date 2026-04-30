@@ -830,6 +830,28 @@ def sampler_supreme(model, x, sigmas, extra_args=None, callback=None, disable=No
     noise_sampler = default_noise_sampler(x) if noise_sampler is None else noise_sampler
     s_in = x.new_ones([x.shape[0]])
 
+    # ----- Flow-Matching safety guard -----
+    # Flow / rectified-flow models (FLUX, SD3, Qwen-Image, Anima, Wan, etc.) use
+    # sigmas in [0, 1] and are NOT stochastic SDEs. Injecting ancestral noise or
+    # multiplicative/spectral modulation noise on each step pushes the latent
+    # off-manifold and produces oversaturated / blown-out colors. Detect this
+    # case via the schedule range and clamp the noise-related parameters.
+    try:
+        sigma_max_val = float(sigmas[0].detach().cpu()) if hasattr(sigmas[0], "detach") else float(sigmas[0])
+    except Exception:
+        sigma_max_val = float(sigmas[0])
+    if sigma_max_val <= 1.001:
+        if eta != 0.0 or s_noise != 0.0 or noise_modulation != "none":
+            print(
+                f"[SamplerSupreme] Flow-matching schedule detected (sigma_max={sigma_max_val:.4f}); "
+                f"forcing eta=0, s_noise=0, noise_modulation='none' to prevent color blow-out. "
+                f"(was eta={eta}, s_noise={s_noise}, noise_modulation={noise_modulation})"
+            )
+        eta = 0.0
+        reversible_eta = 0.0
+        s_noise = 0.0
+        noise_modulation = "none"
+
     # Centralization
     def centralize(denoised_sample, centralization, iteration):
         for b in range(len(denoised_sample)):

@@ -1,0 +1,228 @@
+{
+  "8": {
+    "inputs": {
+      "samples": [
+        "60",
+        1
+      ],
+      "vae": [
+        "15",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE解码"
+    }
+  },
+  "11": {
+    "inputs": {
+      "text": "newest, score_9, score_8, masterpiece, best quality, highres, year 2024, safe, 2girls, \nsaiba midori, saiba momoi, blue archive, Saiba Momoi, a cheerful girl with short blonde hair, bangs, and pink eyes, is sitting energetically with a game controller in her hands. She is wearing a white collared shirt with wide long sleeves under an open white jacket, paired with a black pleated skirt, black thighhighs, a blue necktie, and a red hair bow, complete with a cat tail and fake cat ear headphones on her head, her cheeks showing a soft blush. Beside her, Saiba Midori, featuring short blonde hair with bangs, green eyes, and a glowing halo, sits closely holding her own controller. Midori wears a matching outfit consisting of an open white jacket over a white collared shirt with wide sleeves, a blue necktie, and a blue hair bow, but is dressed in black shorts and black thighhighs, also wearing identical fake cat ear headphones. The two sisters are deeply engaged in a co-op video game, the vibrant light from the television screen reflecting in their eyes inside the cozy game development clubroom.",
+      "clip": [
+        "45",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Positive Prompt)"
+    }
+  },
+  "12": {
+    "inputs": {
+      "text": "worst quality, low quality, score_1, score_2, score_3, blurry, jpeg artifacts, sepia,\ngray image",
+      "clip": [
+        "45",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Negative Prompt)"
+    }
+  },
+  "15": {
+    "inputs": {
+      "vae_name": "qwen_image_vae.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "加载VAE"
+    }
+  },
+  "19": {
+    "inputs": {
+      "seed": 18872766545465,
+      "steps": 40,
+      "cfg": 4,
+      "sampler_name": "er_sde",
+      "scheduler": "simple",
+      "denoise": 1,
+      "model": [
+        "44",
+        0
+      ],
+      "positive": [
+        "11",
+        0
+      ],
+      "negative": [
+        "12",
+        0
+      ],
+      "latent_image": [
+        "28",
+        0
+      ]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "K采样器"
+    }
+  },
+  "28": {
+    "inputs": {
+      "width": 1024,
+      "height": 1024,
+      "batch_size": 1
+    },
+    "class_type": "EmptyLatentImage",
+    "_meta": {
+      "title": "Empty Latent Image"
+    }
+  },
+  "44": {
+    "inputs": {
+      "unet_name": "anima-preview2.safetensors",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "UNet加载器"
+    }
+  },
+  "45": {
+    "inputs": {
+      "clip_name": "qwen_3_06b_base.safetensors",
+      "type": "stable_diffusion",
+      "device": "default"
+    },
+    "class_type": "CLIPLoader",
+    "_meta": {
+      "title": "加载CLIP"
+    }
+  },
+  "46": {
+    "inputs": {
+      "filename_prefix": "ComfyUI",
+      "images": [
+        "8",
+        0
+      ]
+    },
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "Save Image"
+    }
+  },
+  "59": {
+    "inputs": {
+      "noise_sampler_type": "uniform",
+      "step_method": "rkf45",
+      "substep_method": "rk4",
+      "eta": 1,
+      "centralization": 0.02,
+      "normalization": 0.01,
+      "edge_enhancement": 0.05,
+      "perphist": 0,
+      "substeps": 4,
+      "s_noise": 1,
+      "noise_modulation": "frequency",
+      "modulation_strength": 2,
+      "modulation_dims": 3,
+      "reversible_eta": 1
+    },
+    "class_type": "SamplerSupreme",
+    "_meta": {
+      "title": "SamplerSupreme"
+    }
+  },
+  "60": {
+    "inputs": {
+      "noise": [
+        "61",
+        0
+      ],
+      "guider": [
+        "63",
+        0
+      ],
+      "sampler": [
+        "59",
+        0
+      ],
+      "sigmas": [
+        "62",
+        0
+      ],
+      "latent_image": [
+        "28",
+        0
+      ]
+    },
+    "class_type": "SamplerCustomAdvanced",
+    "_meta": {
+      "title": "自定义采样器（高级）"
+    }
+  },
+  "61": {
+    "inputs": {
+      "noise_seed": 0
+    },
+    "class_type": "RandomNoise",
+    "_meta": {
+      "title": "随机噪波"
+    }
+  },
+  "62": {
+    "inputs": {
+      "scheduler": "simple",
+      "steps": 40,
+      "denoise": 1,
+      "model": [
+        "44",
+        0
+      ]
+    },
+    "class_type": "BasicScheduler",
+    "_meta": {
+      "title": "基本调度器"
+    }
+  },
+  "63": {
+    "inputs": {
+      "cfg_max": 10,
+      "cfg_min": 1,
+      "model": [
+        "44",
+        0
+      ],
+      "positive": [
+        "11",
+        0
+      ],
+      "unconditional": [
+        "12",
+        0
+      ],
+      "sigmas": [
+        "62",
+        0
+      ]
+    },
+    "class_type": "ScheduledCFGGuider",
+    "_meta": {
+      "title": "ScheduledCFGGuider"
+    }
+  }
+}

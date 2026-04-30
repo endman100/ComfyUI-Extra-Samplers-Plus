@@ -868,9 +868,31 @@ def sampler_supreme(model, x, sigmas, extra_args=None, callback=None, disable=No
         denoised = model(x, sigma_s_in, **args)
 
         if edge_enhancement != 0:
-            blur = (kornia.filters.joint_bilateral_blur(x, denoised, (3, 3), 0.1, (1.5, 1.5)) - x) # Blurs non-edges
-            denoised += (kornia.filters.unsharp_mask(denoised, (3, 3), (1.5, 1.5)) - denoised) * (sigmas[i] - sigmas[i + 1]) * edge_enhancement / steps_per_sigma # Sharpens everything
-            denoised += blur * (sigmas[i] - sigmas[i + 1]) * edge_enhancement / steps_per_sigma # Apply blur to non-edges, thus leaving edges sharpened
+            # kornia filters require 4D (B, C, H, W). Qwen-Image / video latents are 5D
+            # (B, C, T, H, W). Collapse the extra temporal dim into the batch dim and
+            # restore it afterwards so the spatial enhancement still works per-frame.
+            x_4d = x
+            den_4d = denoised
+            orig_5d_shape = None
+            if x.dim() == 5:
+                b, c, t, h, w = x.shape
+                orig_5d_shape = (b, c, t, h, w)
+                x_4d = x.permute(0, 2, 1, 3, 4).reshape(b * t, c, h, w)
+                den_4d = denoised.permute(0, 2, 1, 3, 4).reshape(b * t, c, h, w)
+
+            blur_4d = kornia.filters.joint_bilateral_blur(x_4d, den_4d, (3, 3), 0.1, (1.5, 1.5)) - x_4d # Blurs non-edges
+            sharp_4d = kornia.filters.unsharp_mask(den_4d, (3, 3), (1.5, 1.5)) - den_4d # Sharpens everything
+
+            if orig_5d_shape is not None:
+                b, c, t, h, w = orig_5d_shape
+                blur = blur_4d.reshape(b, t, c, h, w).permute(0, 2, 1, 3, 4)
+                sharp = sharp_4d.reshape(b, t, c, h, w).permute(0, 2, 1, 3, 4)
+            else:
+                blur = blur_4d
+                sharp = sharp_4d
+
+            denoised = denoised + sharp * (sigmas[i] - sigmas[i + 1]) * edge_enhancement / steps_per_sigma
+            denoised = denoised + blur * (sigmas[i] - sigmas[i + 1]) * edge_enhancement / steps_per_sigma # Apply blur to non-edges, thus leaving edges sharpened
 
         if centralization != 0:
             denoised = centralize(denoised, centralization / steps_per_sigma, i)

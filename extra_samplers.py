@@ -1106,6 +1106,16 @@ def sampler_supreme(model, x, sigmas, extra_args=None, callback=None, disable=No
         case 3:
             dims = (-3, -2, -1)
 
+    # NaN/Inf early-warning helper
+    def _nan_check(tensor, label, step, substep=None):
+        has_nan = torch.isnan(tensor).any().item()
+        has_inf = torch.isinf(tensor).any().item()
+        if has_nan or has_inf:
+            loc = f"step={step}" + (f", substep={substep}" if substep is not None else "")
+            nan_count = int(torch.isnan(tensor).sum().item()) if has_nan else 0
+            inf_count = int(torch.isinf(tensor).sum().item()) if has_inf else 0
+            print(f"[SamplerSupreme] WARNING NaN/Inf in '{label}' ({loc}): nan={nan_count}, inf={inf_count}")
+
     orig_model = model
     old_denoised = None
     prev_denoised = None
@@ -1130,7 +1140,7 @@ def sampler_supreme(model, x, sigmas, extra_args=None, callback=None, disable=No
             eps_cache = {}
 
             denoised = model(z_k, sigmas[i] * s_in, **extra_args)
-
+            _nan_check(denoised, "denoised (model output)", i, k)  # checkpoint-1
 
             eps = (z_k - denoised) / sigmas[i]
             eps_cache = {'eps': eps}
@@ -1307,6 +1317,7 @@ def sampler_supreme(model, x, sigmas, extra_args=None, callback=None, disable=No
 
                     z_k = math.exp(-h)*z_k + h*(b1*denoised + b2*denoised2)
 
+            _nan_check(z_k, "z_k (post-step)", i, k)  # checkpoint-2
             z_avg += renoise_weights[k] * z_k
             if sigmas[i + 1] > 0: # Random noise for variance on ancestral samplers
                 noise_mod = noise_sampler(sigmas[i], sigmas[i + 1]) * s_noise * sigma_up
@@ -1323,6 +1334,7 @@ def sampler_supreme(model, x, sigmas, extra_args=None, callback=None, disable=No
                         noise = noise_sampler(sigmas[i], sigmas[i + 1])
                         noise_mod = spectral_modulate_noise(x, noise, s_noise, sigma_up, modulation_strength, dims)
                 z_k = z_k + noise_mod
+                _nan_check(z_k, "z_k (post-noise-inner)", i, k)  # checkpoint-3
 
         x = z_avg
         if sigmas[i + 1] > 0:
@@ -1342,6 +1354,7 @@ def sampler_supreme(model, x, sigmas, extra_args=None, callback=None, disable=No
 
             x = x + noise_mod
 
+        _nan_check(x, "x (end of step)", i)  # checkpoint-4
         prev_x = x
         prev_denoised = denoised
 
